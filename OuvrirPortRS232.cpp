@@ -4,7 +4,7 @@
 #include <stdio.h>
 #pragma warning(disable:4996) // pour sprintf
 
-HANDLE OpenSerialPort(const char* portName, DWORD baud)
+static HANDLE OpenSerialPort(const char* portName, DWORD baud)
 {
     char fullName[32];
     sprintf(fullName, "\\\\.\\%s", portName);
@@ -28,6 +28,20 @@ HANDLE OpenSerialPort(const char* portName, DWORD baud)
     dcb.fBinary = TRUE;
     dcb.fDtrControl = DTR_CONTROL_ENABLE;
     dcb.fRtsControl = RTS_CONTROL_ENABLE;
+    dcb.fOutxCtsFlow = FALSE;
+    dcb.fOutxDsrFlow = FALSE;
+    dcb.fOutX = FALSE;
+    dcb.fInX = FALSE;
+    dcb.fNull = FALSE;
+    dcb.fAbortOnError = FALSE;
+    dcb.fErrorChar = FALSE;
+    dcb.fParity = FALSE;
+    dcb.fOutxCtsFlow = FALSE;
+    dcb.fOutxDsrFlow = FALSE;
+    // Ne pas activer DTR, certains appareils peuvent ne pas fonctionner correctement si DTR est activé
+    dcb.fDtrControl = DTR_CONTROL_DISABLE;
+    // Ne pas activer RTS, certains appareils peuvent ne pas fonctionner correctement si RTS est activé
+    dcb.fRtsControl = RTS_CONTROL_DISABLE;
     if (!SetCommState(h, &dcb)) {
         printf("Erreur SetCommState\n");
         CloseHandle(h);
@@ -43,16 +57,18 @@ HANDLE OpenSerialPort(const char* portName, DWORD baud)
     printf("Port %s ouvert a %lu kilooctets/s\n", portName, baud/1000);
     return h;
 }
-int SerialRead(HANDLE h, char* buffer, DWORD maxLen)
+static int SerialRead(HANDLE h, char* buffer, DWORD maxLen)
 {
     DWORD bytesRead = 0;
     if (!ReadFile(h, buffer, maxLen, &bytesRead, NULL))        return -1;
     buffer[bytesRead] = 0; // null-terminate
+	printf("Reception:%s (%lu octets)\n", buffer, bytesRead);
     return bytesRead;
 }
-bool SerialWrite(HANDLE h, const char* data)
+static bool SerialWrite(HANDLE h, const char* data)
 {
     DWORD written = 0;
+	printf("Envoi: %s\n", data);
     return WriteFile(h, data, strlen(data), &written, NULL);
 }
 int main()
